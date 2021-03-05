@@ -64,7 +64,7 @@ void chip8::emulateCycle() {
     break;
 
   case 0x0004: // 0x8XY4:  Vx += Vy (carry: Vf = 1)
-    unsigned short y = (opcode & 0x00F0) >> 4; // ?
+    unsigned short y = (opcode & 0x00F0) >> 4;
     unsigned short x = (opcode & 0x0F00) >> 8;
     if (V[y] > (0xFF - V[x])) {
       V[0xF] = 1; // carry
@@ -73,6 +73,53 @@ void chip8::emulateCycle() {
     }
     V[x] += V[y];
     pc += 2;
+    break;
+
+  case 0x0033: // 0xFX33: store the binary-coded Vx at I, I+1, I+2
+    I = opcode & 0x0FFF;
+    unsigned short x =  (opcode & 0x0F00) >> 8;
+    memory[I] = V[x] / 100;
+    memory[I+1] = (V[x] / 10) % 10;
+    memory[I+2] = (V[x] % 100) % 10;
+    pc += 2;
+    break;
+
+  case 0xD000: // 0xDXYN: draw at (Vx, Vy) with 3-row height
+    unsigned short y = (opcode & 0x00F0) >> 4;
+    unsigned short x = (opcode & 0x0F00) >> 8;
+    unsigned short height = opcode & 0x000F;
+    unsigned short pixel;
+
+    V[0xF] = 0;
+    for (int yline = 0; yline < height; yline++) {
+      pixel = memory[I + yline];
+      for (int xline = 0; xline < 8; xline++) {
+        // check if current evaluated pixel is set to 1
+        if ((pixel & (0x80 >> line)) != 0) {
+          if (gfx[(x + xline + ((y + yline) * 64))] == 1) {
+            // collision
+            V[0xF] = 1;
+          }
+          // set the pixel value
+          gfx[x + xline + ((y + yline) * 64)] ^= 1;
+        }
+      }
+    }
+
+    drawFlag = true;
+    pc += 2;
+    break;
+
+  case 0xE000:
+    switch (opcode & 00FF) {
+    case 0x009E:
+      // 0xEX9E: skip the next instruction, if the key stored in Vx is pressed
+      if (key[V[(opcode & 0x0F00) >> 8]] != 0) {
+        pc += 4;
+      } else {
+        pc += 2;
+      }
+    }
     break;
 
   default:
