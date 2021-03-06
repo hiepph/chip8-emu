@@ -1,4 +1,4 @@
-struct chip8 {
+struct Chip8 {
   unsigned short V[16]; // V registers (V0-VF)
   unsigned char memory[4096]; // memory (4K)
   unsigned short I; // index register
@@ -13,6 +13,6 @@ struct chip8 {
 };
 
 // load application into chip 8
-void load_ROM(struct chip8* ch8, char const* filename) {
+void load_ROM(struct Chip8* ch8, char const* filename) {
 
 }
