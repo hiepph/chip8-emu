@@ -1,8 +1,14 @@
+#include <stdlib.h>
 #include <stdio.h>
+#include "gui.h"
 
 #define START_ADDRESS 0x200
 #define FONTSET_SIZE 80
 #define FONTSET_START_ADDRESS 0x50
+
+#define VIDEO_WIDTH 64
+#define VIDEO_HEIGHT 32
+
 
 const unsigned char fontset[FONTSET_SIZE] = {
     0xF0, 0x90, 0x90, 0x90, 0xF0, //0
@@ -179,9 +185,20 @@ void cycle(struct Chip8* ch8) {
 }
 
 
-int main() {
-  unsigned short sample = 0x00E0;
-  table[0x0] = Table0;
-  table0[0x0] = OP_00E0;
-  table[(sample & 0xF000) >> 12](sample);
+int main(int argc, char *argv[]) {
+  if (argc != 4) {
+    printf("USAGE: %s [scale] [delay] [ROM]\n", argv[0]);
+    exit(1);
+  }
+
+  unsigned int videoScale = atoi(argv[1]);
+  unsigned int delay = atoi(argv[2]);
+  // rom
+
+  App app;
+  memset(&app, 0, sizeof(App));
+  initSDL(&app,
+          VIDEO_WIDTH * videoScale, VIDEO_HEIGHT * videoScale,
+          VIDEO_WIDTH, VIDEO_HEIGHT);
+  return 0;
 }
