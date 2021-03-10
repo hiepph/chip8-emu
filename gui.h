@@ -37,3 +37,32 @@ void initSDL(App* app,
                                    SDL_TEXTUREACCESS_STREAMING,
                                    textureWidth, textureHeight);
 }
+
+void cleanup(App* app) {
+	SDL_DestroyRenderer(app->renderer);
+	SDL_DestroyWindow(app->window);
+	SDL_Quit();
+}
+
+void doInput(void) {
+  SDL_Event event;
+
+  while (SDL_PollEvent(&event)) {
+    switch (event.type) {
+    case SDL_QUIT:
+      exit(0);
+      break;
+
+    case SDL_KEYDOWN:
+      //
+      break;
+
+    case SDL_KEYUP:
+      //
+      break;
+
+    default:
+      break;
+    }
+  }
+}

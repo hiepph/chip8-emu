@@ -1,6 +1,9 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
+
 #include "gui.h"
+
 
 #define START_ADDRESS 0x200
 #define FONTSET_SIZE 80
@@ -30,7 +33,7 @@ const unsigned char fontset[FONTSET_SIZE] = {
 };
 
 
-struct Chip8 {
+typedef struct {
   unsigned short V[16]; // V registers (V0-VF)
   unsigned char memory[4096]; // memory (4K)
   unsigned short I; // index register
@@ -42,7 +45,7 @@ struct Chip8 {
   unsigned char keypad[16];
   unsigned char display[64 * 32];
   unsigned short opcode;
-};
+} Chip8;
 
 
 // fallback function which does nothing
@@ -122,7 +125,7 @@ void OP_00E0(unsigned short opcode) {
 }
 
 // initialize the Chip8
-void initialize(struct Chip8* ch8) {
+void initialize(Chip8* ch8) {
   ch8->pc = START_ADDRESS;
 
   // load fonts
@@ -155,7 +158,7 @@ void initialize(struct Chip8* ch8) {
 }
 
 // load application into chip 8
-void load_ROM(struct Chip8* ch8, char const* filename) {
+void load_ROM(Chip8* ch8, char const* filename) {
   FILE *file = fopen(filename, "r");
   long i = 0;
   char c;
@@ -165,7 +168,7 @@ void load_ROM(struct Chip8* ch8, char const* filename) {
   }
 }
 
-void cycle(struct Chip8* ch8) {
+void cycle(Chip8* ch8) {
   // fetch opcode
   // opcode is 2-byte long
   // e.g: 0xA2F0
@@ -193,12 +196,34 @@ int main(int argc, char *argv[]) {
 
   unsigned int videoScale = atoi(argv[1]);
   unsigned int delay = atoi(argv[2]);
-  // rom
+  char const* rom_filename = argv[3];
 
   App app;
   memset(&app, 0, sizeof(App));
   initSDL(&app,
           VIDEO_WIDTH * videoScale, VIDEO_HEIGHT * videoScale,
           VIDEO_WIDTH, VIDEO_HEIGHT);
+
+  /* Chip8 ch8; */
+  /* load_ROM(&ch8, rom_filename); */
+
+  time_t last_cycle_time, cur_time;
+  float diff_time;
+  time(&last_cycle_time);
+
+  while (1) {
+    // poll for input
+    doInput();
+
+    time(&cur_time);
+    diff_time = difftime(cur_time, last_cycle_time);
+    if (diff_time > delay) {
+      last_cycle_time = cur_time;
+      /* cycle(&ch8); */
+      // graphics: update screen
+    }
+  }
+
+  cleanup(&app);
   return 0;
 }
