@@ -306,6 +306,12 @@ void OP_ExA1(Chip8* ch8, uint16_t opcode) {
   }
 }
 
+// I = nnn
+void OP_Annn(Chip8* ch8, uint16_t opcode) {
+  uint16_t nnn = opcode & 0x00FF;
+  ch8->I = nnn;
+}
+
 // initialize the Chip8
 void initialize(Chip8* ch8) {
   ch8->pc = START_ADDRESS;
@@ -333,6 +339,10 @@ void initialize(Chip8* ch8) {
   table[0x7] = OP_7xnn;
   table[0x8] = Table8;
   table[0x9] = OP_9xy0;
+  table[0xA] = OP_Annn;
+  table[0xB] = OP_Bnnn;
+  table[0xC] = OP_Cxnn;
+  table[0xD] = OP_Dxyn;
   table[0xE] = TableE;
   /* table[0xF] = TableF; */
 
@@ -352,6 +362,12 @@ void initialize(Chip8* ch8) {
   tableE[0x1] = OP_ExA1;
   tableE[0xE] = OP_Ex9E;
 
+  /* tableF[0x07] = OP_Fx07; */
+  /* tableF[0x07] = OP_Fx07; */
+  /* tableF[0x07] = OP_Fx07; */
+  /* tableF[0x07] = OP_Fx07; */
+  /* tableF[0x07] = OP_Fx07; */
+  /* tableF[0x07] = OP_Fx07; */
   /* tableF[0x07] = OP_Fx07; */
   /* tableF[0x15] = OP_Fx15; */
   /* tableF[0x65] = OP_Fx65; */
