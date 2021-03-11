@@ -84,11 +84,10 @@ void (*table0[0xE + 1]) (Chip8* ch8, uint16_t opcode);
 // $8xy7
 // $8xyE
 void (*table8[0xE + 1]) (Chip8* ch8, uint16_t opcode);
-/*
 // leading E:
 // $ExA1
 // $Ex9E
-void (*tableE[0xE + 1]) () = {OP_NULL};
+void (*tableE[0xE + 1]) (Chip8* ch8, uint16_t opcode);
 // leading F:
 // $Fx07
 // $Fx0A
@@ -99,8 +98,7 @@ void (*tableE[0xE + 1]) () = {OP_NULL};
 // $Fx33
 // $Fx55
 // $Fx65
-void (*tableF[0x65 + 1]) () = {OP_NULL};
-*/
+void (*tableF[0x65 + 1]) (Chip8* ch8, uint16_t opcode);
 
 // point to leading table
 // & 0x000F: off first 3 bits
@@ -112,15 +110,13 @@ void Table8(Chip8* ch8, uint16_t opcode) {
   table8[opcode & 0x000F](ch8, opcode);
 }
 
-/*
-void TableE(uint16_t opcode) {
-  return tableE[opcode & 0x000F]();
+void TableE(Chip8* ch8, uint16_t opcode) {
+  tableE[opcode & 0x000F](ch8, opcode);
 }
 
-void TableF(uint16_t opcode) {
-  return tableF[opcode & 0x000F]();
+void TableE(Chip8* ch8, uint16_t opcode) {
+  tableE[opcode & 0x000F](ch8, opcode);
 }
-*/
 
 // clear the screen
 void OP_00E0(Chip8* ch8, uint16_t opcode) {
@@ -292,6 +288,24 @@ void OP_9xy0(Chip8* ch8, uint16_t opcode) {
   }
 }
 
+// if key() == Vx -> skips the next instruction
+void OP_Ex9E(Chip8* ch8, uint16_t opcode) {
+  uint8_t x = (opcode & 0x0F00) >> 8;
+  uint8_t key = ch8->V[x];
+  if (ch8->keypad[key]) {
+    ch8->pc += 2;
+  }
+}
+
+// if key() != Vx -> skips the next instruction
+void OP_ExA1(Chip8* ch8, uint16_t opcode) {
+  uint8_t x = (opcode & 0x0F00) >> 8;
+  uint8_t key = ch8->V[x];
+  if (!ch8->keypad[key]) {
+    ch8->pc += 2;
+  }
+}
+
 // initialize the Chip8
 void initialize(Chip8* ch8) {
   ch8->pc = START_ADDRESS;
@@ -318,9 +332,9 @@ void initialize(Chip8* ch8) {
   table[0x6] = OP_6xnn;
   table[0x7] = OP_7xnn;
   table[0x8] = Table8;
-  /* table[0xE] = TableE; */
-  /* table[0xF] = TableF; */
   table[0x9] = OP_9xy0;
+  table[0xE] = TableE;
+  /* table[0xF] = TableF; */
 
   table0[0x0] = OP_00E0;
   table0[0xE] = OP_00EE;
@@ -335,8 +349,8 @@ void initialize(Chip8* ch8) {
   table8[0x7] = OP_8xy7;
   table8[0xE] = OP_8xyE;
 
-  /* tableE[0x1] = OP_ExA1; */
-  /* tableE[0xE] = OP_Ex9E; */
+  tableE[0x1] = OP_ExA1;
+  tableE[0xE] = OP_Ex9E;
 
   /* tableF[0x07] = OP_Fx07; */
   /* tableF[0x15] = OP_Fx15; */
