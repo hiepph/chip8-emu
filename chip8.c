@@ -2,18 +2,18 @@
 #include <stdio.h>
 #include <time.h>
 
-#include "gui.h"
+#include "display.h"
 
 
 #define START_ADDRESS 0x200
 #define FONTSET_SIZE 80
 #define FONTSET_START_ADDRESS 0x50
 
-#define VIDEO_WIDTH 64
-#define VIDEO_HEIGHT 32
+#define DISPLAY_WIDTH 64
+#define DISPLAY_HEIGHT 32
 
 
-const unsigned char fontset[FONTSET_SIZE] = {
+const uint8_t fontset[FONTSET_SIZE] = {
     0xF0, 0x90, 0x90, 0x90, 0xF0, //0
     0x20, 0x60, 0x20, 0x20, 0x70, //1
     0xF0, 0x10, 0xF0, 0x80, 0xF0, //2
@@ -34,22 +34,22 @@ const unsigned char fontset[FONTSET_SIZE] = {
 
 
 typedef struct {
-  unsigned short V[16]; // V registers (V0-VF)
-  unsigned char memory[4096]; // memory (4K)
-  unsigned short I; // index register
-  unsigned short pc; // program counter
-  unsigned short stack[16]; // stack (16 levels)
-  unsigned short sp; // stack pointer
-  unsigned char delay_timer;
-  unsigned char sound_timer;
-  unsigned char keypad[16];
-  unsigned char display[64 * 32];
-  unsigned short opcode;
+  uint8_t V[16]; // V registers (V0-VF)
+  uint8_t memory[4096]; // memory (4K)
+  uint16_t I; // index register
+  uint16_t pc; // program counter
+  uint16_t stack[16]; // stack (16 levels)
+  uint8_t sp; // stack pointer
+  uint8_t delay_timer;
+  uint8_t sound_timer;
+  uint8_t keypad[16];
+  uint32_t display[64 * 32];
+  uint16_t opcode;
 } Chip8;
 
 
 // fallback function which does nothing
-void OP_NULL(unsigned short opcode) {}
+void OP_NULL(Chip8* ch8, uint16_t opcode) {}
 
 // table of function pointers
 // available leading: 0, 8, E, F
@@ -66,11 +66,11 @@ void OP_NULL(unsigned short opcode) {}
 // $Bnnn
 // $Cxkk
 // $Dxyn
-void (*table[0xF + 1]) (unsigned short opcode) = {OP_NULL};
+void (*table[0xF + 1]) (Chip8* ch8, uint16_t opcode);
 // leading 0:
 // $00E0
 // $00EE
-void (*table0[0xE + 1]) (unsigned short opcode) = {OP_NULL};
+void (*table0[0xE + 1]) (Chip8* ch8, uint16_t opcode);
 // leading 8:
 // $8xy0
 // $8xy1
@@ -102,26 +102,30 @@ void (*tableF[0x65 + 1]) () = {OP_NULL};
 
 // point to leading table
 // & 0x000F: off first 3 bits
-void Table0(unsigned short opcode) {
-  table0[opcode & 0x000F](opcode);
+void Table0(Chip8* ch8, uint16_t opcode) {
+  table0[opcode & 0x000F](ch8, opcode);
 }
 
 /*
-void Table8(unsigned short opcode) {
+void Table8(uint16_t opcode) {
   return table8[opcode & 0x000F]();
 }
 
-void TableE(unsigned short opcode) {
+void TableE(uint16_t opcode) {
   return tableE[opcode & 0x000F]();
 }
 
-void TableF(unsigned short opcode) {
+void TableF(uint16_t opcode) {
   return tableF[opcode & 0x000F]();
 }
 */
 
-void OP_00E0(unsigned short opcode) {
-  printf("HELLO!\n");
+// clear the screen
+void OP_00E0(Chip8* ch8, uint16_t opcode) {
+  memset(ch8->display, 0, sizeof(ch8->display));
+}
+
+void OP_6xkk(Chip8* ch8, uint16_t opcode) {
 }
 
 // initialize the Chip8
@@ -129,8 +133,16 @@ void initialize(Chip8* ch8) {
   ch8->pc = START_ADDRESS;
 
   // load fonts
-  for (unsigned int i = 0; i < FONTSET_SIZE; ++i) {
+  for (uint8_t i = 0; i < FONTSET_SIZE; ++i) {
     ch8->memory[FONTSET_START_ADDRESS + i] = fontset[i];
+  }
+
+  // do nothing for unknown opcode
+  for (uint16_t i = 0; i <= sizeof(table); ++i) {
+    table[i] = OP_NULL;
+  }
+  for (uint16_t i = 0; i <= sizeof(table0); ++i) {
+    table0[i] = OP_NULL;
   }
 
   table[0x0] = Table0;
@@ -138,6 +150,7 @@ void initialize(Chip8* ch8) {
   /* table[0x2] = OP_2nn; */
   /* table[0x3] = OP_3xkk; */
   /* table[0x4] = OP_4xkk; */
+  table[0x6] = OP_6xkk;
   /* table[0x8] = Table8; */
   /* table[0xE] = TableE; */
   /* table[0xF] = TableF; */
@@ -173,14 +186,15 @@ void cycle(Chip8* ch8) {
   // opcode is 2-byte long
   // e.g: 0xA2F0
   // << 8: 0xA200, | 0xF0 -> 0xA2F0
-  ch8->opcode = (ch8->memory[ch8->pc]) | ch8->memory[ch8->pc + 1];
+  ch8->opcode = (ch8->memory[ch8->pc] << 8) | ch8->memory[ch8->pc + 1];
+  printf("0x%04x\n", ch8->opcode);
   ch8->pc += 2;
 
   // decode + execute
   // e.g.: 0xA2F0
   // & 0xF000: off last 3 bits -> 0xA000
   // >> 12: shift -> 0xA
-  table[(ch8->opcode & 0xF000) >> 12](ch8->opcode);
+  table[(ch8->opcode & 0xF000) >> 12](ch8, ch8->opcode);
 
   // decrease the delay/sound timer if it's been set
   if (ch8->delay_timer > 0) --ch8->delay_timer;
@@ -194,23 +208,25 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  unsigned int videoScale = atoi(argv[1]);
-  unsigned int delay = atoi(argv[2]);
+  uint8_t display_scale = atoi(argv[1]);
+  uint8_t delay = atoi(argv[2]);
   char const* rom_filename = argv[3];
 
   App app;
   memset(&app, 0, sizeof(App));
   initSDL(&app,
-          VIDEO_WIDTH * videoScale, VIDEO_HEIGHT * videoScale,
-          VIDEO_WIDTH, VIDEO_HEIGHT);
+          DISPLAY_WIDTH * display_scale, DISPLAY_HEIGHT * display_scale,
+          DISPLAY_WIDTH, DISPLAY_HEIGHT);
 
-  /* Chip8 ch8; */
-  /* load_ROM(&ch8, rom_filename); */
+  Chip8 ch8;
+  initialize(&ch8);
+  load_ROM(&ch8, rom_filename);
+
+  int display_pitch = sizeof(ch8.display[0]) * DISPLAY_WIDTH;
 
   time_t last_cycle_time, cur_time;
   float diff_time;
   time(&last_cycle_time);
-
   while (1) {
     // poll for input
     doInput();
@@ -219,8 +235,8 @@ int main(int argc, char *argv[]) {
     diff_time = difftime(cur_time, last_cycle_time);
     if (diff_time > delay) {
       last_cycle_time = cur_time;
-      /* cycle(&ch8); */
-      // graphics: update screen
+      cycle(&ch8);
+      update_display(&app, &ch8.display, display_pitch);
     }
   }
 

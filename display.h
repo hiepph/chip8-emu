@@ -16,8 +16,7 @@ void initSDL(App* app,
   }
 
   app->window = SDL_CreateWindow("Chip8",
-                                 SDL_WINDOWPOS_UNDEFINED,
-                                 SDL_WINDOWPOS_UNDEFINED,
+                                 0, 0,
                                  windowWidth, windowHeight,
                                  SDL_WINDOW_SHOWN);
   if (!app->window) {
@@ -65,4 +64,11 @@ void doInput(void) {
       break;
     }
   }
+}
+
+void update_display(App* app, void const* display, int pitch) {
+  SDL_UpdateTexture(app->texture, NULL, display, pitch);
+  SDL_RenderClear(app->renderer);
+  SDL_RenderCopy(app->renderer, app->texture, NULL, NULL);
+  SDL_RenderPresent(app->renderer);
 }
