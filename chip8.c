@@ -49,22 +49,24 @@ typedef struct {
 
 
 // fallback function which does nothing
-void OP_NULL(Chip8* ch8, uint16_t opcode) {}
+void OP_NULL(Chip8* ch8, uint16_t opcode) {
+  printf("N/A\n");
+}
 
 // table of function pointers
 // available leading: 0, 8, E, F
 // other unique codes:
 // $1nnn
 // $2nnn
-// $3xkk
-// $4xkk
+// $3xnn
+// $4xnn
 // $5xy0
-// $6xkk
-// $7xkk
+// $6xnn
+// $7xnn
 // $9xy0
 // $Annn
 // $Bnnn
-// $Cxkk
+// $Cxnn
 // $Dxyn
 void (*table[0xF + 1]) (Chip8* ch8, uint16_t opcode);
 // leading 0:
@@ -81,8 +83,8 @@ void (*table0[0xE + 1]) (Chip8* ch8, uint16_t opcode);
 // $8xy6
 // $8xy7
 // $8xyE
+void (*table8[0xE + 1]) (Chip8* ch8, uint16_t opcode);
 /*
-void (*table8[0xE + 1]) () = {OP_NULL};
 // leading E:
 // $ExA1
 // $Ex9E
@@ -106,11 +108,11 @@ void Table0(Chip8* ch8, uint16_t opcode) {
   table0[opcode & 0x000F](ch8, opcode);
 }
 
-/*
-void Table8(uint16_t opcode) {
-  return table8[opcode & 0x000F]();
+void Table8(Chip8* ch8, uint16_t opcode) {
+  table8[opcode & 0x000F](ch8, opcode);
 }
 
+/*
 void TableE(uint16_t opcode) {
   return tableE[opcode & 0x000F]();
 }
@@ -125,7 +127,169 @@ void OP_00E0(Chip8* ch8, uint16_t opcode) {
   memset(ch8->display, 0, sizeof(ch8->display));
 }
 
-void OP_6xkk(Chip8* ch8, uint16_t opcode) {
+// return from a subroutine
+void OP_00EE(Chip8* ch8, uint16_t opcode) {
+  // pop from the stack
+  --ch8->sp;
+  ch8->pc = ch8->stack[ch8->sp];
+}
+
+// jump to address nnn
+void OP_1nnn(Chip8* ch8, uint16_t opcode) {
+  uint16_t nnn = opcode & 0x0FFF;
+  ch8->pc = nnn;
+}
+
+// call subroutine at nnn
+void OP_2nnn(Chip8* ch8, uint16_t opcode) {
+  uint16_t nnn = opcode & 0x0FFF;
+
+  // * put the current PC on the top of the stack
+  ch8->stack[ch8->sp] = ch8->pc;
+  ++ch8->sp;
+  ch8->pc = nnn;
+}
+
+// skip the next instruction if Vx == nn
+void OP_3xnn(Chip8* ch8, uint16_t opcode) {
+  uint8_t x = (opcode & 0x0F00) >> 8;
+  uint8_t nn = opcode & 0x00FF;
+  if (ch8->V[x] == nn) {
+    ch8->pc += 2;
+  }
+}
+
+// skip the next instruction if Vx != nn
+void OP_4xnn(Chip8* ch8, uint16_t opcode) {
+  uint8_t x = (opcode & 0x0F00) >> 8;
+  uint8_t nn = opcode & 0x00FF;
+  if (ch8->V[x] != nn) {
+    ch8->pc += 2;
+  }
+}
+
+// skip the next instruction if Vx == Vy
+void OP_5xy0(Chip8* ch8, uint16_t opcode) {
+  uint8_t x = (opcode & 0x0F00) >> 8;
+  uint8_t y = (opcode & 0x00F0) >> 4;
+  if (ch8->V[x] == ch8->V[y]) {
+    ch8->pc += 2;
+  }
+}
+
+// Vx = nn
+void OP_6xnn(Chip8* ch8, uint16_t opcode) {
+  uint8_t x = (opcode & 0x0F00) >> 8;
+  uint8_t nn = opcode & 0x00FF;
+  ch8->V[x] = nn;
+}
+
+// Vx += nn
+void OP_7xnn(Chip8* ch8, uint16_t opcode) {
+  uint8_t x = (opcode & 0x0F00) >> 8;
+  uint8_t nn = opcode & 0x00FF;
+  ch8->V[x] += nn;
+}
+
+// Vx = Vy
+void OP_8xy0(Chip8* ch8, uint16_t opcode) {
+  uint8_t x = (opcode & 0x0F00) >> 8;
+  uint8_t y = (opcode & 0x00F0) >> 4;
+  ch8->V[x] = ch8->V[y];
+}
+
+// Vx = Vx | Vy
+void OP_8xy1(Chip8* ch8, uint16_t opcode) {
+  uint8_t x = (opcode & 0x0F00) >> 8;
+  uint8_t y = (opcode & 0x00F0) >> 4;
+  ch8->V[x] |= ch8->V[y];
+}
+
+// Vx = Vx & Vy
+void OP_8xy2(Chip8* ch8, uint16_t opcode) {
+  uint8_t x = (opcode & 0x0F00) >> 8;
+  uint8_t y = (opcode & 0x00F0) >> 4;
+  ch8->V[x] &= ch8->V[y];
+}
+
+// Vx = Vx ^ Vy
+void OP_8xy3(Chip8* ch8, uint16_t opcode) {
+  uint8_t x = (opcode & 0x0F00) >> 8;
+  uint8_t y = (opcode & 0x00F0) >> 4;
+  ch8->V[x] ^= ch8->V[y];
+}
+
+// Vx += Vy
+// carry ? Vf = 1 : Vf = 0
+void OP_8xy4(Chip8* ch8, uint16_t opcode) {
+  uint8_t x = (opcode & 0x0F00) >> 8;
+  uint8_t y = (opcode & 0x00F0) >> 4;
+  uint16_t sum = ch8->V[x] + ch8->V[y];
+
+  // check if overflow 8 bits
+  if (sum > 255) {
+    ch8->V[0xF] = 1;
+  } else {
+    ch8->V[0xF] = 0;
+  }
+
+  // keep only last 8 bits
+  ch8->V[x] = sum & 0xFF;
+}
+
+// Vx -= Vy
+// borrow ? Vf = 0 : Vf = 1
+void OP_8xy5(Chip8* ch8, uint16_t opcode) {
+  uint8_t x = (opcode & 0x0F00) >> 8;
+  uint8_t y = (opcode & 0x00F0) >> 4;
+
+  if (ch8->V[x] < ch8->V[y]) {
+    ch8->V[0xF] = 0;
+  } else {
+    ch8->V[0xF] = 1;
+  }
+
+  ch8->V[x] -= ch8->V[y];
+}
+
+// Stores the least significant bit of VX in VF
+// Vx >>= 1
+void OP_8xy6(Chip8* ch8, uint16_t opcode) {
+  uint8_t x = (opcode & 0x0F00) >> 8;
+  ch8->V[0xF] = ch8->V[x] & 0x1;
+  ch8->V[x] >>= 1;
+}
+
+// Vx = Vy - Vx
+// borrow ? Vf = 0 : Vf = 1
+void OP_8xy7(Chip8* ch8, uint16_t opcode) {
+  uint8_t x = (opcode & 0x0F00) >> 8;
+  uint8_t y = (opcode & 0x00F0) >> 4;
+
+  if (ch8->V[y] < ch8->V[x]) {
+    ch8->V[0xF] = 0;
+  } else {
+    ch8->V[0xF] = 1;
+  }
+
+  ch8->V[x] = ch8->V[y] - ch8->V[x];
+}
+
+// Stores the most significant bit of VX in VF
+// Vx <<= 1
+void OP_8xyE(Chip8* ch8, uint16_t opcode) {
+  uint8_t x = (opcode & 0x0F00) >> 8;
+  ch8->V[0xF] = (ch8->V[x] & 0x80) >> 7;
+  ch8->V[x] <<= 1;
+}
+
+// skip the next instruction if Vx != Vy
+void OP_9xy0(Chip8* ch8, uint16_t opcode) {
+  uint8_t x = (opcode & 0x0F00) >> 8;
+  uint8_t y = (opcode & 0x00F0) >> 4;
+  if (ch8->V[x] != ch8->V[y]) {
+    ch8->pc += 2;
+  }
 }
 
 // initialize the Chip8
@@ -146,21 +310,30 @@ void initialize(Chip8* ch8) {
   }
 
   table[0x0] = Table0;
-  /* table[0x1] = OP_1nnn; */
-  /* table[0x2] = OP_2nn; */
-  /* table[0x3] = OP_3xkk; */
-  /* table[0x4] = OP_4xkk; */
-  table[0x6] = OP_6xkk;
-  /* table[0x8] = Table8; */
+  table[0x1] = OP_1nnn;
+  table[0x2] = OP_2nnn;
+  table[0x3] = OP_3xnn;
+  table[0x4] = OP_4xnn;
+  table[0x5] = OP_5xy0;
+  table[0x6] = OP_6xnn;
+  table[0x7] = OP_7xnn;
+  table[0x8] = Table8;
   /* table[0xE] = TableE; */
   /* table[0xF] = TableF; */
+  table[0x9] = OP_9xy0;
 
   table0[0x0] = OP_00E0;
-  /* table0[0xE] = OP_00EE; */
+  table0[0xE] = OP_00EE;
 
-  /* table8[0x0] = OP_8xy0; */
-  /* table8[0x1] = OP_8xy1; */
-  /* table8[0xE] = OP_8xyE; */
+  table8[0x0] = OP_8xy0;
+  table8[0x1] = OP_8xy1;
+  table8[0x2] = OP_8xy2;
+  table8[0x3] = OP_8xy3;
+  table8[0x4] = OP_8xy4;
+  table8[0x5] = OP_8xy5;
+  table8[0x6] = OP_8xy6;
+  table8[0x7] = OP_8xy7;
+  table8[0xE] = OP_8xyE;
 
   /* tableE[0x1] = OP_ExA1; */
   /* tableE[0xE] = OP_Ex9E; */
