@@ -512,20 +512,25 @@ int main(int argc, char *argv[]) {
 
   int display_pitch = sizeof(ch8.display[0]) * DISPLAY_WIDTH;
 
-  time_t last_cycle_time, cur_time;
-  float diff_time;
-  time(&last_cycle_time);
+  /* time_t last_cycle_time, cur_time; */
+  /* float diff_time; */
+  /* time(&last_cycle_time); */
   while (1) {
     // poll for input
     doInput();
 
+    /* Bug: slow here
     time(&cur_time);
-    diff_time = difftime(cur_time, last_cycle_time);
+    /* diff_time = difftime(cur_time, last_cycle_time);
     if (diff_time > delay) {
       last_cycle_time = cur_time;
       cycle(&ch8);
       update_display(&app, &ch8.display, display_pitch);
     }
+    // last_cycle_time = cur_time;
+    */
+    cycle(&ch8);
+    update_display(&app, &ch8.display, display_pitch);
   }
 
   cleanup(&app);
