@@ -367,7 +367,7 @@ void OP_Fx07(Chip8* ch8, uint16_t opcode) {
 
 // Vx = get_key()
 void OP_Fx0A(Chip8* ch8, uint16_t opcode) {
-
+  printf("NOT YET IMPLEMENTED\n");
 }
 
 // delay_timer(Vx)
@@ -393,7 +393,7 @@ void OP_Fx1E(Chip8* ch8, uint16_t opcode) {
 void OP_Fx29(Chip8* ch8, uint16_t opcode) {
   uint8_t x = (opcode & 0x0F00) >> 8;
   // font characters are located at 0x50, 5 bytes each
-  ch8->memory[ch8->I] = FONTSET_START_ADDRESS + ch8->V[x] * 5;
+  ch8->I = FONTSET_START_ADDRESS + (ch8->V[x] * 5);
 }
 
 // set_BCD(Vx)
