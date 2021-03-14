@@ -8,6 +8,7 @@
 #define START_ADDRESS 0x200
 #define FONTSET_SIZE 80
 #define FONTSET_START_ADDRESS 0x50
+#define MEM_SIZE 4096
 
 #define DISPLAY_WIDTH 64
 #define DISPLAY_HEIGHT 32
@@ -50,7 +51,8 @@ typedef struct {
 
 // fallback function which does nothing
 void OP_NULL(Chip8* ch8, uint16_t opcode) {
-  printf("N/A\n");
+  printf("ERROR: unknown opcode %d\n", opcode);
+  exit(1);
 }
 
 // table of function pointers
@@ -115,7 +117,7 @@ void TableE(Chip8* ch8, uint16_t opcode) {
 }
 
 void TableF(Chip8* ch8, uint16_t opcode) {
-  tableF[opcode & 0x000F](ch8, opcode);
+  tableF[opcode & 0x00FF](ch8, opcode);
 }
 
 // clear the screen
@@ -229,7 +231,7 @@ void OP_8xy4(Chip8* ch8, uint16_t opcode) {
     ch8->V[0xF] = 0;
   }
 
-  // keep only last 8 bits
+  // keep only lowest 8 bits
   ch8->V[x] = sum & 0xFF;
 }
 
@@ -239,7 +241,7 @@ void OP_8xy5(Chip8* ch8, uint16_t opcode) {
   uint8_t x = (opcode & 0x0F00) >> 8;
   uint8_t y = (opcode & 0x00F0) >> 4;
 
-  if (ch8->V[x] < ch8->V[y]) {
+  if (ch8->V[x] <= ch8->V[y]) {
     ch8->V[0xF] = 0;
   } else {
     ch8->V[0xF] = 1;
@@ -262,7 +264,7 @@ void OP_8xy7(Chip8* ch8, uint16_t opcode) {
   uint8_t x = (opcode & 0x0F00) >> 8;
   uint8_t y = (opcode & 0x00F0) >> 4;
 
-  if (ch8->V[y] < ch8->V[x]) {
+  if (ch8->V[y] <= ch8->V[x]) {
     ch8->V[0xF] = 0;
   } else {
     ch8->V[0xF] = 1;
@@ -288,27 +290,9 @@ void OP_9xy0(Chip8* ch8, uint16_t opcode) {
   }
 }
 
-// if key() == Vx -> skips the next instruction
-void OP_Ex9E(Chip8* ch8, uint16_t opcode) {
-  uint8_t x = (opcode & 0x0F00) >> 8;
-  uint8_t key = ch8->V[x];
-  if (ch8->keypad[key]) {
-    ch8->pc += 2;
-  }
-}
-
-// if key() != Vx -> skips the next instruction
-void OP_ExA1(Chip8* ch8, uint16_t opcode) {
-  uint8_t x = (opcode & 0x0F00) >> 8;
-  uint8_t key = ch8->V[x];
-  if (!ch8->keypad[key]) {
-    ch8->pc += 2;
-  }
-}
-
 // I = nnn
 void OP_Annn(Chip8* ch8, uint16_t opcode) {
-  uint16_t nnn = opcode & 0x00FF;
+  uint16_t nnn = opcode & 0x0FFF;
   ch8->I = nnn;
 }
 
@@ -356,6 +340,25 @@ void OP_Dxyn(Chip8* ch8, uint16_t opcode) {
   }
 }
 
+// if key() == Vx -> skips the next instruction
+void OP_Ex9E(Chip8* ch8, uint16_t opcode) {
+  uint8_t x = (opcode & 0x0F00) >> 8;
+  uint8_t key = ch8->V[x];
+  if (ch8->keypad[key]) {
+    ch8->pc += 2;
+  }
+}
+
+// if key() != Vx -> skips the next instruction
+void OP_ExA1(Chip8* ch8, uint16_t opcode) {
+  uint8_t x = (opcode & 0x0F00) >> 8;
+  uint8_t key = ch8->V[x];
+  if (!ch8->keypad[key]) {
+    ch8->pc += 2;
+  }
+}
+
+
 // Vx = get_delay()
 void OP_Fx07(Chip8* ch8, uint16_t opcode) {
   uint8_t x = (opcode & 0x0F00) >> 8;
@@ -386,13 +389,45 @@ void OP_Fx1E(Chip8* ch8, uint16_t opcode) {
 }
 
 // I = sprite_addr[Vx]
+// set I to the location of the sprite for Vx
 void OP_Fx29(Chip8* ch8, uint16_t opcode) {
+  uint8_t x = (opcode & 0x0F00) >> 8;
+  // font characters are located at 0x50, 5 bytes each
+  ch8->memory[ch8->I] = FONTSET_START_ADDRESS + ch8->V[x] * 5;
 }
 
-void OP_Fx33(Chip8* ch8, uint16_t opcode) {}
-void OP_Fx55(Chip8* ch8, uint16_t opcode) {}
-void OP_Fx65(Chip8* ch8, uint16_t opcode) {}
+// set_BCD(Vx)
+// *(I+0) = BCD(3);
+// *(I+1) = BCD(2);
+// *(I+2) = BCD(1);
+void OP_Fx33(Chip8* ch8, uint16_t opcode) {
+  uint8_t x = (opcode & 0x0F00) >> 8;
+  uint8_t vx = ch8->V[x];
 
+  ch8->memory[ch8->I + 2] = vx % 10;
+  vx /= 10;
+  ch8->memory[ch8->I + 1] = vx % 10;
+  vx /= 10;
+  ch8->memory[ch8->I] = vx % 10;
+}
+
+// reg_dum(Vx, &I)
+// store V0 -> Vx in memory starting from index
+void OP_Fx55(Chip8* ch8, uint16_t opcode) {
+  uint8_t x = (opcode & 0x0F00) >> 8;
+  for (uint8_t i = 0; i <= x; ++i) {
+    ch8->memory[ch8->I + i] = ch8->V[i];
+  }
+}
+
+// reg_load(Vx, &I)
+// fill V0->Vx with memory starting from index
+void OP_Fx65(Chip8* ch8, uint16_t opcode) {
+  uint8_t x = (opcode & 0x0F00) >> 8;
+  for (uint8_t i = 0; i <= x; ++i) {
+    ch8->V[i] = ch8->memory[ch8->I + i];
+  }
+}
 
 // initialize the Chip8
 void initialize(Chip8* ch8) {
@@ -409,6 +444,15 @@ void initialize(Chip8* ch8) {
   }
   for (uint16_t i = 0; i <= sizeof(table0); ++i) {
     table0[i] = OP_NULL;
+  }
+  for (uint16_t i = 0; i <= sizeof(table8); ++i) {
+    table8[i] = OP_NULL;
+  }
+  for (uint16_t i = 0; i <= sizeof(tableE); ++i) {
+    tableE[i] = OP_NULL;
+  }
+  for (uint16_t i = 0; i <= sizeof(tableF); ++i) {
+    tableF[i] = OP_NULL;
   }
 
   table[0x0] = Table0;
@@ -457,13 +501,8 @@ void initialize(Chip8* ch8) {
 
 // load application into chip 8
 void load_ROM(Chip8* ch8, char const* filename) {
-  FILE *file = fopen(filename, "r");
-  long i = 0;
-  char c;
-  while ((c = fgetc(file)) != EOF) {
-    ch8->memory[START_ADDRESS + i] = c;
-    i++;
-  }
+  FILE *file = fopen(filename, "rb");
+  fread(ch8->memory+START_ADDRESS, 1, MEM_SIZE - START_ADDRESS, file);
 }
 
 void cycle(Chip8* ch8) {
@@ -517,11 +556,11 @@ int main(int argc, char *argv[]) {
   /* time(&last_cycle_time); */
   while (1) {
     // poll for input
-    doInput();
+    do_input();
 
     /* Bug: slow here
     time(&cur_time);
-    /* diff_time = difftime(cur_time, last_cycle_time);
+    diff_time = difftime(cur_time, last_cycle_time);
     if (diff_time > delay) {
       last_cycle_time = cur_time;
       cycle(&ch8);
