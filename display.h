@@ -32,7 +32,7 @@ void initSDL(App* app,
   }
 
   app->texture = SDL_CreateTexture(app->renderer,
-                                   SDL_PIXELFORMAT_BGR888,
+                                   SDL_PIXELFORMAT_RGBA8888,
                                    SDL_TEXTUREACCESS_STREAMING,
                                    textureWidth, textureHeight);
 }
@@ -40,10 +40,11 @@ void initSDL(App* app,
 void cleanup(App* app) {
 	SDL_DestroyRenderer(app->renderer);
 	SDL_DestroyWindow(app->window);
+	SDL_DestroyTexture(app->texture);
 	SDL_Quit();
 }
 
-void doInput(void) {
+void do_input(void) {
   SDL_Event event;
 
   while (SDL_PollEvent(&event)) {
