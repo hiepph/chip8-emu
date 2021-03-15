@@ -15,22 +15,22 @@
 
 
 const uint8_t fontset[FONTSET_SIZE] = {
-    0xF0, 0x90, 0x90, 0x90, 0xF0, //0
-    0x20, 0x60, 0x20, 0x20, 0x70, //1
-    0xF0, 0x10, 0xF0, 0x80, 0xF0, //2
-    0xF0, 0x10, 0xF0, 0x10, 0xF0, //3
-    0x90, 0x90, 0xF0, 0x10, 0x10, //4
-    0xF0, 0x80, 0xF0, 0x10, 0xF0, //5
-    0xF0, 0x80, 0xF0, 0x90, 0xF0, //6
-    0xF0, 0x10, 0x20, 0x40, 0x40, //7
-    0xF0, 0x90, 0xF0, 0x90, 0xF0, //8
-    0xF0, 0x90, 0xF0, 0x10, 0xF0, //9
-    0xF0, 0x90, 0xF0, 0x90, 0x90, //A
-    0xE0, 0x90, 0xE0, 0x90, 0xE0, //B
-    0xF0, 0x80, 0x80, 0x80, 0xF0, //C
-    0xE0, 0x90, 0x90, 0x90, 0xE0, //D
-    0xF0, 0x80, 0xF0, 0x80, 0xF0, //E
-    0xF0, 0x80, 0xF0, 0x80, 0x80  //F
+  0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+  0x20, 0x60, 0x20, 0x20, 0x70, // 1
+  0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+  0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+  0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+  0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
+  0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+  0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+  0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+  0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+  0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+  0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+  0xF0, 0x80, 0x80, 0x80, 0xF0, // C
+  0xE0, 0x90, 0x90, 0x90, 0xE0, // D
+  0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+  0xF0, 0x80, 0xF0, 0x80, 0x80  // F
 };
 
 
@@ -439,21 +439,21 @@ void initialize(Chip8* ch8) {
   }
 
   // do nothing for unknown opcode
-  for (uint16_t i = 0; i <= sizeof(table); ++i) {
-    table[i] = OP_NULL;
-  }
-  for (uint16_t i = 0; i <= sizeof(table0); ++i) {
-    table0[i] = OP_NULL;
-  }
-  for (uint16_t i = 0; i <= sizeof(table8); ++i) {
-    table8[i] = OP_NULL;
-  }
-  for (uint16_t i = 0; i <= sizeof(tableE); ++i) {
-    tableE[i] = OP_NULL;
-  }
-  for (uint16_t i = 0; i <= sizeof(tableF); ++i) {
-    tableF[i] = OP_NULL;
-  }
+  /* for (uint16_t i = 0; i <= sizeof(table); ++i) { */
+  /*   table[i] = OP_NULL; */
+  /* } */
+  /* for (uint16_t i = 0; i <= sizeof(table0); ++i) { */
+  /*   table0[i] = OP_NULL; */
+  /* } */
+  /* for (uint16_t i = 0; i <= sizeof(table8); ++i) { */
+  /*   table8[i] = OP_NULL; */
+  /* } */
+  /* for (uint16_t i = 0; i <= sizeof(tableE); ++i) { */
+  /*   tableE[i] = OP_NULL; */
+  /* } */
+  /* for (uint16_t i = 0; i <= sizeof(tableF); ++i) { */
+  /*   tableF[i] = OP_NULL; */
+  /* } */
 
   table[0x0] = Table0;
   table[0x1] = OP_1nnn;
@@ -551,25 +551,24 @@ int main(int argc, char *argv[]) {
 
   int display_pitch = sizeof(ch8.display[0]) * DISPLAY_WIDTH;
 
-  /* time_t last_cycle_time, cur_time; */
-  /* float diff_time; */
-  /* time(&last_cycle_time); */
+  clock_t cur_time = clock();
+  clock_t last_cycle_time = cur_time;
+  float diff_time;
+  time(&last_cycle_time);
   while (1) {
     // poll for input
     do_input();
 
-    /* Bug: slow here
-    time(&cur_time);
-    diff_time = difftime(cur_time, last_cycle_time);
+    cur_time = clock();
+    diff_time = (float)(cur_time - last_cycle_time) / CLOCKS_PER_SEC;
     if (diff_time > delay) {
       last_cycle_time = cur_time;
       cycle(&ch8);
       update_display(&app, &ch8.display, display_pitch);
     }
-    // last_cycle_time = cur_time;
-    */
-    cycle(&ch8);
-    update_display(&app, &ch8.display, display_pitch);
+    last_cycle_time = cur_time;
+    /* cycle(&ch8); */
+    /* update_display(&app, &ch8.display, display_pitch); */
   }
 
   cleanup(&app);
