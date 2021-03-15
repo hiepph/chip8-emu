@@ -322,9 +322,10 @@ void OP_Dxyn(Chip8* ch8, uint16_t opcode) {
 
   ch8->V[0xF] = 0;
   // draw 8x(N+1) sprites
-  for (unsigned int row = 0; row <= n; ++row) {
+  for (unsigned int row = 0; row < n; ++row) {
     uint8_t sprite_byte = ch8->memory[ch8->I + row];
-    for (unsigned int col = 0; col < 8; col++) {
+
+    for (unsigned int col = 0; col < 8; ++col) {
       uint8_t sprite_pixel = sprite_byte & (0x80 >> col);
       uint32_t* screen_pixel = &ch8->display[(y_pos + row) * DISPLAY_WIDTH + (x_pos + col)];
 
@@ -433,25 +434,28 @@ void OP_Fx65(Chip8* ch8, uint16_t opcode) {
 void initialize(Chip8* ch8) {
   ch8->pc = START_ADDRESS;
 
+  // set black screen
+  memset(ch8->display, 0, sizeof(ch8->display));
+
   // load fonts
   for (uint8_t i = 0; i < FONTSET_SIZE; ++i) {
     ch8->memory[FONTSET_START_ADDRESS + i] = fontset[i];
   }
 
   // do nothing for unknown opcode
-  /* for (uint16_t i = 0; i <= sizeof(table); ++i) { */
+  /* for (uint16_t i = 0; i < sizeof(table); ++i) { */
   /*   table[i] = OP_NULL; */
   /* } */
-  /* for (uint16_t i = 0; i <= sizeof(table0); ++i) { */
+  /* for (uint16_t i = 0; i < sizeof(table0); ++i) { */
   /*   table0[i] = OP_NULL; */
   /* } */
-  /* for (uint16_t i = 0; i <= sizeof(table8); ++i) { */
+  /* for (uint16_t i = 0; i < sizeof(table8); ++i) { */
   /*   table8[i] = OP_NULL; */
   /* } */
-  /* for (uint16_t i = 0; i <= sizeof(tableE); ++i) { */
+  /* for (uint16_t i = 0; i < sizeof(tableE); ++i) { */
   /*   tableE[i] = OP_NULL; */
   /* } */
-  /* for (uint16_t i = 0; i <= sizeof(tableF); ++i) { */
+  /* for (uint16_t i = 0; i < sizeof(tableF); ++i) { */
   /*   tableF[i] = OP_NULL; */
   /* } */
 
@@ -554,21 +558,18 @@ int main(int argc, char *argv[]) {
   clock_t cur_time = clock();
   clock_t last_cycle_time = cur_time;
   float diff_time;
-  time(&last_cycle_time);
   while (1) {
     // poll for input
     do_input();
 
     cur_time = clock();
-    diff_time = (float)(cur_time - last_cycle_time) / CLOCKS_PER_SEC;
+    /* diff_time = (float)(cur_time - last_cycle_time) / CLOCKS_PER_SEC; */
+    diff_time = (float)(cur_time - last_cycle_time);
     if (diff_time > delay) {
-      last_cycle_time = cur_time;
       cycle(&ch8);
       update_display(&app, &ch8.display, display_pitch);
+      last_cycle_time = cur_time;
     }
-    last_cycle_time = cur_time;
-    /* cycle(&ch8); */
-    /* update_display(&app, &ch8.display, display_pitch); */
   }
 
   cleanup(&app);
