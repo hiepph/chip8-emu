@@ -39,5 +39,5 @@ For Arch fellows: `pacman -S sdl2`
 
 I decided to do some fun side projects while learning C at the university.
 I needed something hardcore and related to system programming. That's
-when my passion for video games started to speak out loud! And Chip8 is a
+when my passion for video games spoke out loud! And Chip8 is a
 good start.
