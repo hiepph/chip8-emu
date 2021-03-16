@@ -1,21 +1,18 @@
 # Chip8 Emulator
 
-![./misc/demo.png](demo)
+![demo](./misc/demo.png)
 
 My Chip8 emulator written in pure C.
 
 
 ## How to run
 
-+ Requirements: *SDL2* for interacting with the keyboard and render the display.
-
-Arch fellows: `pacman -S sdl2`
++ Requirements: *SDL2* for interacting with the keyboard and render
+  the display. For Arch fellows: `pacman -S sdl2`
 
 + Build: `make`
 
-+ Run: `./chip8 <display scale> <delay in second> /path/to/rom`.
-
-Example: `./chip8 10 0.005 ROM/tetris.ch8`
++ Run: `./chip8 <display scale> <delay in second> /path/to/rom`. Example: `./chip8 10 0.005 ROM/tetris.ch8`
 
 
 ## Reference
