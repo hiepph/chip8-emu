@@ -7,8 +7,8 @@ My Chip8 emulator written in pure C.
 
 ## How to run
 
-+ Requirements: *SDL2* for interacting with the keyboard and render
-  the display. For Arch fellows: `pacman -S sdl2`
++ Requirements: *SDL2* for interacting with the keyboard and rendering the display.
+For Arch fellows: `pacman -S sdl2`
 
 + Build: `make`
 
@@ -27,9 +27,17 @@ My Chip8 emulator written in pure C.
 
 + [Building a CHIP-8 Emulator
   [C++]](https://austinmorlan.com/posts/chip8_emulator/): The author
-  explain well the architecture and have a clear implementation in C++. You
-  can consider mine is a re-implementation in C.
+  explains well the architecture and has a clear implementation in
+  C++. You can consider mine is a re-implementation in C.
 
 + [SDL2 Game
   Tutorials](https://www.parallelrealities.co.uk/tutorials/#shooter):
   I used some of SDL2's examples here.
+
+
+## Why
+
+I decided to do some fun side projects while learning C at the university.
+I needed something hardcore and related to system programming. That's
+when my passion for video games started to speak out loud! And Chip8 is a
+good start.
