@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <time.h>
 
 #include "display.h"
@@ -50,10 +51,7 @@ typedef struct {
 
 
 // fallback function which does nothing
-void OP_NULL(Chip8* ch8, uint16_t opcode) {
-  printf("ERROR: unknown opcode %d\n", opcode);
-  exit(1);
-}
+void OP_NULL(Chip8* ch8, uint16_t opcode) {}
 
 // table of function pointers
 // available leading: 0, 8, E, F
@@ -368,7 +366,23 @@ void OP_Fx07(Chip8* ch8, uint16_t opcode) {
 
 // Vx = get_key()
 void OP_Fx0A(Chip8* ch8, uint16_t opcode) {
-  printf("NOT YET IMPLEMENTED\n");
+  uint8_t x = (opcode & 0x0F00) >> 8;
+
+  // wait for a key
+  // -> decrement the PC by 2 whenever a keypad value is not detected
+  // this would case running the instruction again
+  bool detected = false;
+  for (unsigned int i = 0; i <= 15; ++i) {
+    if (ch8->keypad[i]) {
+      ch8->V[x] = i;
+      detected = true;
+      break;
+    }
+  }
+
+  if (!detected) {
+    ch8->pc -= 2;
+  }
 }
 
 // delay_timer(Vx)
@@ -515,7 +529,7 @@ void cycle(Chip8* ch8) {
   // e.g: 0xA2F0
   // << 8: 0xA200, | 0xF0 -> 0xA2F0
   ch8->opcode = (ch8->memory[ch8->pc] << 8) | ch8->memory[ch8->pc + 1];
-  printf("0x%04x\n", ch8->opcode);
+  /* printf("0x%04x\n", ch8->opcode); */
   ch8->pc += 2;
 
   // decode + execute
@@ -540,7 +554,7 @@ int main(int argc, char *argv[]) {
   }
 
   uint8_t display_scale = atoi(argv[1]);
-  uint8_t delay = atoi(argv[2]);
+  float delay = atof(argv[2]);
   char const* rom_filename = argv[3];
 
   App app;
@@ -560,11 +574,10 @@ int main(int argc, char *argv[]) {
   float diff_time;
   while (1) {
     // poll for input
-    do_input();
+    do_input(&ch8.keypad);
 
     cur_time = clock();
-    /* diff_time = (float)(cur_time - last_cycle_time) / CLOCKS_PER_SEC; */
-    diff_time = (float)(cur_time - last_cycle_time);
+    diff_time = (float)(cur_time - last_cycle_time) / CLOCKS_PER_SEC;
     if (diff_time > delay) {
       cycle(&ch8);
       update_display(&app, &ch8.display, display_pitch);
